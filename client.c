@@ -160,27 +160,27 @@ void recieve(){
 	recvlen = recvfrom(clientSocket, &rectext, sizeof(rectext), 0, (struct sockaddr *)&serv_address, &addrlen );
 	
 	if (rectext.txt_type == TXT_SAY){
-
+		printf("Say");
 	}
 
 	else if (rectext.txt_type == TXT_WHO){
-
+		printf("Who");
 	}
 
 	else if (rectext.txt_type == TXT_LIST){
-		struct text_list reclist;
-		reclist = (struct text_list)rectext;
+		struct text_list *reclist;
+		reclist = (struct text_list *)&rectext;
 
 
 		int i;
-		//for (i = 0; i < reclist.txt_nchannels; i++){
-		//printf("%s\n", reclist.txt_channels[i].ch_channel);
-		//}
+        for (i = 0; i < reclist->txt_nchannels; i++){
+        printf("%s\n", reclist->txt_channels[i].ch_channel);
+        }
 
 	}
 
 	else if (rectext.txt_type == TXT_ERROR){
-
+		printf("error");
 	}		
 }
 
@@ -216,8 +216,10 @@ int main(int argc, char *argv[])
 
 	while (running == 1){
 		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
-		
-		//select()
+		int time = 5;
+		if (select(1, &clientSocket, &clientSocket, NULL, time) > 0){
+			recieve();
+		}
 		temp = read(1, cmd, 1024);
 		cmd[temp-1] = '\0';
 
