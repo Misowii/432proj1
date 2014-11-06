@@ -37,17 +37,27 @@
 
 	struct hostent *hp;
 	struct sockaddr_in serv_address;
-
+	socklen_t addrlen;
 
 void list(){ //channels
-	printf("list\n");
+	//printf("list\n");
+	struct request_list rlist;
+    rlist.req_type = REQ_LIST;
+    sendto(clientSocket, &rlist, sizeof(rlist), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
+
+
 	//send message to server to recieve list of active channels
 }
 
-void who(){ //users
-	printf("who\n");
+void who(char *wanted_channel){ //users
+	//printf("who\n");
+	struct request_who rwho;
+    rwho.req_type = REQ_WHO;
+    strcpy(rwho.req_channel, wanted_channel); 
 	//send message to server to recieve list of users in channel
-}
+    sendto(clientSocket, &rwho, sizeof(rwho), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
+   }
+
 
 void say(char *message){
 	//printf("%s\n", cmd);
@@ -99,7 +109,9 @@ void leave(char *wanted_channel){
 			//send message to server to leave
 			struct request_leave rleave;
         	rleave.req_type = REQ_LEAVE;
-        	//rleave.req_channel = wanted_channel;
+        	strcpy(rleave.req_channel, wanted_channel);
+      		sendto(clientSocket, &rleave, sizeof(rleave), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
+
 
 		}
 	}
@@ -124,11 +136,6 @@ void switchto(char *wanted_channel){
 	}
 }
 
-void exitclient(){
-	running = 0;
-	//send logout
-}
-
 void login(char *usertitle){
 	struct request_login logreq;
 	logreq.req_type = REQ_LOGIN;
@@ -136,13 +143,51 @@ void login(char *usertitle){
 	sendto(clientSocket, &logreq, sizeof(logreq), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
 	//send login request with logreq
 }
+void  logout(){
+	struct request_logout rlogout;
+	rlogout.req_type = REQ_LOGOUT;
+	sendto(clientSocket, &rlogout, sizeof(rlogout), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
+}
+
+void exitclient(){
+	logout();
+	running = 0;
+	//send logout
+}
+
+void recieve(){
+	struct text rectext;
+	recvlen = recvfrom(clientSocket, &rectext, sizeof(rectext), 0, (struct sockaddr *)&serv_address, &addrlen );
+	
+	if (rectext.txt_type == TXT_SAY){
+
+	}
+
+	else if (rectext.txt_type == TXT_WHO){
+
+	}
+
+	else if (rectext.txt_type == TXT_LIST){
+		struct text_list reclist;
+		reclist = (struct text_list)rectext;
 
 
+		int i;
+		//for (i = 0; i < reclist.txt_nchannels; i++){
+		//printf("%s\n", reclist.txt_channels[i].ch_channel);
+		//}
+
+	}
+
+	else if (rectext.txt_type == TXT_ERROR){
+
+	}		
+}
 
 int main(int argc, char *argv[])
 {
 
-	//socklen_t addrlen = sizeof(serv_address);
+	
 
 	if (argc != 4)
 	{
@@ -164,12 +209,15 @@ int main(int argc, char *argv[])
 	serv_address.sin_port = htons(serverPort);
 
 	//printf("%s\n", serverName);
+	addrlen = sizeof(serv_address);
 
 	login(username);
 	join(Common);
 
 	while (running == 1){
 		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
+		
+		//select()
 		temp = read(1, cmd, 1024);
 		cmd[temp-1] = '\0';
 
@@ -183,7 +231,8 @@ int main(int argc, char *argv[])
 				list();
 			}
 			else if(strcmp(comtype, whocom)== 0){
-				who();
+				comtype = strtok(NULL, " ");
+				who(comtype);
 			}
 			else if(strcmp(comtype, joincom) == 0){
 				comtype = strtok(NULL, " ");
