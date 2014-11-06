@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "duckchat.h"
 
@@ -30,6 +31,7 @@
 	const char *leavecom = "/leave";
 	const char *switchcom = "/switch";
 	#define MAX_CHANNELS 32
+	#define STDIN 0
 	char Common[] = "common";
 	char cur_channels[MAX_CHANNELS][CHANNEL_MAX];
 	int channel_count = 0;
@@ -77,7 +79,7 @@ void join(char *channel){
 	for (i = 0; i < channel_count; i++){
 		if (strcmp(cur_channels[i], channel) == 0){
 			current_channel = channel;
-			printf("Channel already joined, switch to suggested channel now");
+			printf("Channel already joined, switch to suggested channel now\n");
 			flag = 1;
 			//printf("%s\n", current_channel);
 		}
@@ -102,7 +104,8 @@ void leave(char *wanted_channel){
 	for (i = 0; i < channel_count; i++){
 		if (strcmp(cur_channels[i], wanted_channel) == 0){
 			current_channel = cur_channels[0];
-			printf("Left channel, switching to common channel.");
+			strcpy(cur_channels[i], " ");
+			//printf("Left channel, switching to common channel.");
 			flag = 1;
 			//printf("%s\n", current_channel);
 
@@ -116,7 +119,7 @@ void leave(char *wanted_channel){
 		}
 	}
 	if (flag == 0){
-		printf("Channel suggested has not been joined");
+		printf("Channel suggested has not been joined\n");
 	}
 }
 
@@ -160,35 +163,96 @@ void recieve(){
 	recvlen = recvfrom(clientSocket, &rectext, sizeof(rectext), 0, (struct sockaddr *)&serv_address, &addrlen );
 	
 	if (rectext.txt_type == TXT_SAY){
-		printf("Say");
+		//printf("Say\n");
+		char message[SAY_MAX];
+		char tempchannel[CHANNEL_MAX];
+		char tempuser[USERNAME_MAX];
+		struct text_say *recsay;
+		recsay = (struct text_say *)&rectext;
+
+		strcpy(tempchannel, recsay->txt_channel);
+		strcpy(message, recsay->txt_text);
+		strcpy(tempuser, recsay->txt_username);
+		printf("[ %s ][ %s ] %s\n", tempchannel, tempuser, message);
+
+
 	}
 
 	else if (rectext.txt_type == TXT_WHO){
-		printf("Who");
+		//printf("Who\n");
+		//char tempuser[USERNAME_MAX];
+		char tempchannel[CHANNEL_MAX];
+		struct text_who *recwho;
+		recwho = (struct text_who *)&rectext;
+		strcpy(tempchannel, recwho->txt_channel);
+		printf("%s\n", tempchannel);
+		printf("%d\n", recwho->txt_nusernames);
+
 	}
 
 	else if (rectext.txt_type == TXT_LIST){
 		struct text_list *reclist;
 		reclist = (struct text_list *)&rectext;
+		printf("%d\n", reclist->txt_nchannels);
 
-
-		int i;
-        for (i = 0; i < reclist->txt_nchannels; i++){
-        printf("%s\n", reclist->txt_channels[i].ch_channel);
-        }
+		//int i;
+       // for (i = 0; i < reclist->txt_nchannels; i++){
+       // printf("%s\n", reclist->txt_channels[i].ch_channel);
+       //}
 
 	}
 
 	else if (rectext.txt_type == TXT_ERROR){
-		printf("error");
+		printf("error\n");
 	}		
 }
 
+void readCommand(){
+	temp = read(1, cmd, 1024);
+		cmd[temp-1] = '\0';
+
+	if (cmd[0] == command){
+		comtype = strtok(cmd, " ");
+		//printf("%s\n", comtype);
+		if (strcmp(cmd, exitcom) == 0){	
+			exitclient();
+		}
+		else if(strcmp(cmd, listcom)== 0){
+			list();
+		}
+		else if(strcmp(comtype, whocom)== 0){
+			comtype = strtok(NULL, " ");
+			who(comtype);
+		}
+		else if(strcmp(comtype, joincom) == 0){
+			comtype = strtok(NULL, " ");
+			join(comtype);
+		}
+		else if(strcmp(comtype, leavecom) == 0){
+			comtype = strtok(NULL, " ");
+			leave(comtype);
+		}
+		else if(strcmp(comtype, switchcom) == 0){
+			comtype = strtok(NULL, " ");
+			switchto(comtype);
+		}
+		else if (strcmp(cmd, "/currentchannel") == 0){
+			printf("%s\n", current_channel);
+		}
+		else{
+			printf("Unrecognized Command!\n");
+		}
+	}
+	else{
+		//printf("%s\n", cmd);
+		say(cmd);
+	}
+			
+}
+
+
 int main(int argc, char *argv[])
-{
-
-	
-
+{	
 	if (argc != 4)
 	{
 		printf("Client requires 3 arguments. Servername, Port, and Username.\n");
@@ -211,54 +275,36 @@ int main(int argc, char *argv[])
 	//printf("%s\n", serverName);
 	addrlen = sizeof(serv_address);
 
+	struct timeval tv;
+	fd_set readfds;
+	fd_set master;
+	tv.tv_sec = 3;
+	int fdmax;
+
+	FD_ZERO(&readfds);
+	FD_ZERO(&master);
+	FD_SET(STDIN, &master);
+	FD_SET(clientSocket, &master);
+	fdmax = clientSocket;
+
+
 	login(username);
 	join(Common);
 
 	while (running == 1){
+		readfds = master;
 		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
-		int time = 5;
-		if (select(1, &clientSocket, &clientSocket, NULL, time) > 0){
+		int temp;
+		temp = select(fdmax + 1, &readfds, NULL, NULL, &tv);
+			//recieve();
+		if (FD_ISSET(STDIN, &readfds)){
+			//printf("key pressed\n");
+			readCommand();
+		}
+		else if (FD_ISSET(clientSocket, &readfds)){
 			recieve();
 		}
-		temp = read(1, cmd, 1024);
-		cmd[temp-1] = '\0';
-
-		if (cmd[0] == command){
-			comtype = strtok(cmd, " ");
-			//printf("%s\n", comtype);
-			if (strcmp(cmd, exitcom) == 0){	
-				exitclient();
-			}
-			else if(strcmp(cmd, listcom)== 0){
-				list();
-			}
-			else if(strcmp(comtype, whocom)== 0){
-				comtype = strtok(NULL, " ");
-				who(comtype);
-			}
-			else if(strcmp(comtype, joincom) == 0){
-				comtype = strtok(NULL, " ");
-				join(comtype);
-			}
-			else if(strcmp(comtype, leavecom) == 0){
-				comtype = strtok(NULL, " ");
-				leave(comtype);
-			}
-			else if(strcmp(comtype, switchcom) == 0){
-				comtype = strtok(NULL, " ");
-				switchto(comtype);
-			}
-			else if (strcmp(cmd, "/currentchannel") == 0){
-				printf("%s\n", current_channel);
-			}
-			else{
-				printf("Unrecognized Command!\n");
-			}
-		}
-		else{
-			//printf("%s\n", cmd);
-			say(cmd);
-			}
+		
 
 		
 	};
