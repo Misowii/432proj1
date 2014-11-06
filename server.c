@@ -16,7 +16,7 @@
 int Run = 1;
 char *serverAddr;
 int serverPort;
-unsigned char message[SAY_MAX];
+char message[SAY_MAX];
 int recvlen;
 int serverSocket;
 unsigned char sendmessage;
@@ -27,13 +27,15 @@ int usercount = 0;
 
 struct User{
 	char *cur_username;
-	char cur_channels[MAX_CHANNELS][CHANNEL_MAX];
-	struct sockaddr_in cur_address;
+	struct Channel cur_channels[MAX_CHANNELS];
+	int numchannels;
+	struct sockaddr cur_address;
 };
 
 struct Channel{
 	char cur_channel[CHANNEL_MAX];
-	char cur_usernames[MAX_USERS][USERNAME_MAX];
+	struct User cur_usernames[MAX_USERS];
+	int numusers;
 };
 
 struct User all_Users[MAX_USERS];
@@ -41,8 +43,9 @@ struct Channel all_Channels[MAX_CHANNELS];
 
 struct Channel Common;
 
+
 struct sockaddr_in hostaddr;		
-struct sockaddr_in remaddr;
+struct sockaddr remaddr;
 
 void list(){
 	printf("list\n");
@@ -52,16 +55,32 @@ void who(){
 	printf("who\n");
 }
 
-void say(){
-	
+void say(char *mesg, struct Channel){
+	int i;
+	int f = Channel.numusers;
+	for (i = 0; i < f; i++){
+		struct User utemp = Channel.cur_usernames[i];
+		struct sockaddr temp = utemp.cur_address;
+
+		sendto(serverSocket, mesg, strlen(mesg), 0, (struct sockaddr *)&temp, sizeof(temp));
+	}
 
 }
 
 
 void login(char *username){
-	printf("%s\n", username);
-	all_Users[0].cur_username = username;
-	all_Users[0].cur_address = remaddr;
+	//printf("%s\n", username);
+	struct User user;
+	user.cur_username = username;
+	user.cur_address = remaddr;
+	user.cur_channels[0] = Common;
+	user.numchannels += 1;
+	all_Users[0] = user;
+	int i;
+	i = Common.numusers;
+	Common.cur_usernames[i] = user;
+	Common.numusers += 1;
+	//all_Users[0].cur_address = remaddr;
 	usercount += 1;
 
 
@@ -82,7 +101,7 @@ void switchto(){
 
 
 void decifermessage(char *mesg){
-
+	printf("%s\n", mesg);
 }
 
 
@@ -98,6 +117,7 @@ int main(int argc, char *argv[])
 	else{
 
 		all_Channels[0] = Common;
+		Common.numusers = 0;
 
 
 		socklen_t addrlen = sizeof(remaddr);
@@ -136,7 +156,7 @@ int main(int argc, char *argv[])
 			recvlen = recvfrom(serverSocket, message, sizeof(message), 0, (struct sockaddr *)&remaddr, &addrlen);
 			if (recvlen > 0){
 				printf("recieved message\n");
-				decifermessage(message);
+				//decifermessage(message);
 				printf("%s\n",message);
 				//if (sendto(serverSocket, sendmessage, strlen(message), 0, (struct sockaddr *)&serv_address, sizeof(serv_address)) < (0)){
 									

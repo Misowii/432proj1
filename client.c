@@ -111,11 +111,12 @@ void switchto(char *wanted_channel){
 
 void exitclient(){
 	running = 0;
+	//send logout
 }
 
 void login(char *usertitle){
 	struct request_login logreq;
-	logreq.req_username = usertitle;
+	strcpy(logreq.req_username, usertitle);
 
 	//send login request with logreq
 	join(Common);
