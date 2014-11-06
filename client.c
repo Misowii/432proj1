@@ -67,7 +67,7 @@ void join(char *channel){
 			printf("%s\n", current_channel);
 		}
 	}
-	if (flag == 0){
+	if (!flag){
 		strcpy(cur_channels[channel_count], channel);
 		channel_count += 1;
 		current_channel = channel;
@@ -75,7 +75,9 @@ void join(char *channel){
 		//send message to server to join channel
 		struct request_join rjoin;
 		rjoin.req_type = REQ_JOIN;
-		//rjoin.req_channel = channel;
+		strcpy(rjoin.req_channel, channel);
+		sendto(clientSocket, &rjoin, sizeof(rjoin), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
+
 	}
 }
 
@@ -128,7 +130,6 @@ void login(char *usertitle){
 	strcpy(logreq.req_username, usertitle);
 	sendto(clientSocket, &logreq, sizeof(logreq), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
 	//send login request with logreq
-	join(Common);
 }
 
 
@@ -160,6 +161,7 @@ int main(int argc, char *argv[])
 	//printf("%s\n", serverName);
 
 	login(username);
+	join(Common);
 
 	while (running == 1){
 		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
@@ -202,8 +204,9 @@ int main(int argc, char *argv[])
 			say();
 			}
 
-		close(clientSocket);
-		return 0;
+		
 	};
+	close(clientSocket);
+	return 0;
 
 }
