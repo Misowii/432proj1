@@ -23,11 +23,13 @@ unsigned char sendmessage;
 #define MAX_USERS 100
 #define MAX_CHANNELS 32 
 int usercount = 0;
+socklen_t addrlen;
+
 
 
 struct User{
 	char *cur_username;
-	struct Channel cur_channels[MAX_CHANNELS];
+	//struct Channel cur_channels[MAX_CHANNELS];
 	int numchannels;
 	struct sockaddr cur_address;
 };
@@ -47,17 +49,26 @@ struct Channel Common;
 struct sockaddr_in hostaddr;		
 struct sockaddr remaddr;
 
-void list(){
+void list(struct request reqmes){
 	printf("list\n");
+	struct request_list *reqlist;
+	reqlist = (struct request_list *)&reqmes;
+
 }
 
-void who(){
+void who(struct request reqmes){
 	printf("who\n");
+	struct request_who *reqwho;
+	reqwho = (struct request_who *)&reqmes;
 }
 
-void say(char *mesg, struct Channel){
-	int i;
-	int f = Channel.numusers;
+void say(struct request reqmes){
+	printf("say\n");
+	struct request_say *reqsay;
+	reqsay = (struct request_say *)&reqmes;
+}
+	/*int i;
+	int f = chan.numusers;
 	for (i = 0; i < f; i++){
 		struct User utemp = Channel.cur_usernames[i];
 		struct sockaddr temp = utemp.cur_address;
@@ -66,14 +77,18 @@ void say(char *mesg, struct Channel){
 	}
 
 }
+*/
 
+void login(struct request reqmes){
+	printf("join\n");
+	struct request_login *reqlogin;
+	reqlogin = (struct request_login *)&reqmes;
 
-void login(char *username){
-	//printf("%s\n", username);
+	/*//printf("%s\n", username);
 	struct User user;
 	user.cur_username = username;
 	user.cur_address = remaddr;
-	user.cur_channels[0] = Common;
+	//user.cur_channels[0] = Common;
 	user.numchannels += 1;
 	all_Users[0] = user;
 	int i;
@@ -82,28 +97,57 @@ void login(char *username){
 	Common.numusers += 1;
 	//all_Users[0].cur_address = remaddr;
 	usercount += 1;
-
+	*/
 
 }
 
-void join(char *username, char *channel){
+void join(struct request reqmes){
 	printf("join\n");
-	printf("%s\n", channel);
-	printf("%s\n", username);
+	struct request_join *reqjoin;
+	reqjoin = (struct request_join *)&reqmes;
+
 
 }
-
-void switchto(){
-	printf("switch\n");
+void logout(struct request reqmes){
+	printf("logout\n");
+	struct request_logout *reqlogout;
+	reqlogout = (struct request_logout *)&reqmes;
 }
 
-
-
-
-void decifermessage(char *mesg){
-	printf("%s\n", mesg);
+void leave(struct request reqmes){
+	printf("leave\n");
+	struct request_leave *reqleave;
+	reqleave = (struct request_leave *)&reqmes;
 }
 
+void recieve(){
+	struct request request_message;
+
+	addrlen = sizeof(remaddr);
+	recvlen = recvfrom(serverSocket, &request_message, sizeof(request_message), 0, (struct sockaddr *)&remaddr, &addrlen );
+	if (request_message.req_type == REQ_LOGIN){
+		login(request_message);
+	}
+	else if (request_message.req_type == REQ_LOGOUT){
+		logout(request_message);
+	}
+	else if (request_message.req_type == REQ_SAY){
+		say(request_message);
+	}
+	else if (request_message.req_type == REQ_JOIN){
+		join(request_message);
+	}
+	else if (request_message.req_type == REQ_WHO){
+		who(request_message);
+	}
+	else if (request_message.req_type == REQ_LIST){
+		list(request_message);
+	}	
+	else if (request_message.req_type == REQ_LEAVE){
+		leave(request_message);
+	}		
+
+}
 
 int main(int argc, char *argv[])
 {
@@ -119,14 +163,11 @@ int main(int argc, char *argv[])
 		all_Channels[0] = Common;
 		Common.numusers = 0;
 
-
-		socklen_t addrlen = sizeof(remaddr);
-
 		serverAddr = argv[1];
 		serverPort = atoi(argv[2]);
 
-		printf("%s\n", serverAddr);
-		printf("%d\n", serverPort);
+		//printf("%s\n", serverAddr);
+		//printf("%d\n", serverPort);
 
 		memset((char *)&hostaddr, 0, sizeof(hostaddr));
 		hostaddr.sin_family = AF_INET;
@@ -146,29 +187,30 @@ int main(int argc, char *argv[])
 			return(-1);
 		};
 
+		struct timeval tv;
+		fd_set readfds;
+		fd_set master;
+		tv.tv_sec = 3;
+		int fdmax;
+
+		FD_ZERO(&readfds);
+		FD_ZERO(&master);
+		//FD_SET(STDIN, &master);
+		FD_SET(serverSocket, &master);
+		fdmax = serverSocket;
 		
-
-
-		
-
-			printf("waiting for connection\n");
+		printf("waiting for connection\n");
 		while(Run == 1){	
-			recvlen = recvfrom(serverSocket, message, sizeof(message), 0, (struct sockaddr *)&remaddr, &addrlen);
-			if (recvlen > 0){
-				printf("recieved message\n");
-				//decifermessage(message);
-				printf("%s\n",message);
-				//if (sendto(serverSocket, sendmessage, strlen(message), 0, (struct sockaddr *)&serv_address, sizeof(serv_address)) < (0)){
-									
-				//}
-
-				Run = 0;
-			};
-			
-
+			int temp;
+			temp = select(fdmax + 1, &readfds, NULL, NULL, &tv);
+			if (FD_ISSET(serverSocket, &readfds)){
+				printf("connection\n");
+				recieve();
+			}
 
 		};
 	close(serverSocket);
+	return 0;
 	};
 	
 }
