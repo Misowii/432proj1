@@ -49,9 +49,14 @@ void who(){ //users
 	//send message to server to recieve list of users in channel
 }
 
-void say(){
-	printf("%s\n", cmd);
+void say(char *message){
+	//printf("%s\n", cmd);
 	//send message with channel/username/message?
+	struct request_say rsay;
+	rsay.req_type = REQ_SAY;
+    strcpy(rsay.req_channel, current_channel); 
+    strcpy(rsay.req_text, message);
+    sendto(clientSocket, &rsay, sizeof(rsay), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
 
 }
 
@@ -64,14 +69,14 @@ void join(char *channel){
 			current_channel = channel;
 			printf("Channel already joined, switch to suggested channel now");
 			flag = 1;
-			printf("%s\n", current_channel);
+			//printf("%s\n", current_channel);
 		}
 	}
 	if (!flag){
 		strcpy(cur_channels[channel_count], channel);
 		channel_count += 1;
 		current_channel = channel;
-		printf("%s\n", current_channel);
+		//printf("%s\n", current_channel);
 		//send message to server to join channel
 		struct request_join rjoin;
 		rjoin.req_type = REQ_JOIN;
@@ -106,12 +111,12 @@ void leave(char *wanted_channel){
 void switchto(char *wanted_channel){
 	int flag = 0;
 	int i;
-	printf("%s\n", current_channel);
+	//printf("%s\n", current_channel);
 	for (i = 0; i < channel_count; i++){
 		if (strcmp(cur_channels[i], wanted_channel) == 0){
 			current_channel = wanted_channel;
 			flag = 1;
-			printf("%s\n", current_channel);
+			//printf("%s\n", current_channel);
 		}
 	}
 	if (flag == 0){
@@ -201,7 +206,7 @@ int main(int argc, char *argv[])
 		}
 		else{
 			//printf("%s\n", cmd);
-			say();
+			say(cmd);
 			}
 
 		
