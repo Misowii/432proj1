@@ -36,6 +36,9 @@
 	int channel_count = 0;
 	char *current_channel;
 
+	struct hostent *hp;
+	struct sockaddr_in serv_address;
+
 
 void list(){ //channels
 	printf("list\n");
@@ -71,6 +74,9 @@ void join(char *channel){
 		current_channel = channel;
 		printf("%s\n", current_channel);
 		//send message to server to join channel
+		struct request_join rjoin;
+		rjoin.req_type = REQ_JOIN;
+		//rjoin.req_channel = channel;
 	}
 }
 
@@ -85,6 +91,9 @@ void leave(char *wanted_channel){
 			//printf("%s\n", current_channel);
 
 			//send message to server to leave
+			struct request_leave rleave;
+        	rleave.req_type = REQ_LEAVE;
+        	//rleave.req_channel = wanted_channel;
 
 		}
 	}
@@ -116,8 +125,9 @@ void exitclient(){
 
 void login(char *usertitle){
 	struct request_login logreq;
+	logreq.req_type = REQ_LOGIN;
 	strcpy(logreq.req_username, usertitle);
-
+	sendto(clientSocket, &logreq, sizeof(logreq), 0, (struct sockaddr *)&serv_address, sizeof(serv_address));
 	//send login request with logreq
 	join(Common);
 }
@@ -126,8 +136,7 @@ void login(char *usertitle){
 
 int main(int argc, char *argv[])
 {
-	struct hostent *hp;
-	struct sockaddr_in serv_address;
+
 	//socklen_t addrlen = sizeof(serv_address);
 
 	if (argc != 4)
