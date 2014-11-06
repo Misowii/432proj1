@@ -25,7 +25,7 @@ unsigned char sendmessage;
 int usercount = 0;
 socklen_t addrlen;
 
-
+struct hostent *hp;
 
 struct User{
 	char *cur_username;
@@ -120,11 +120,12 @@ void leave(struct request reqmes){
 	reqleave = (struct request_leave *)&reqmes;
 }
 
-void recieve(){
-	struct request request_message;
+void recieve(struct request request_message){
+	printf("got to recieve\n");
+	//struct request request_message;
 
-	addrlen = sizeof(remaddr);
-	recvlen = recvfrom(serverSocket, &request_message, sizeof(request_message), 0, (struct sockaddr *)&remaddr, &addrlen );
+	//addrlen = sizeof(remaddr);
+	//recvlen = recvfrom(serverSocket, &request_message, sizeof(request_message), 0, (struct sockaddr *)&remaddr, &addrlen );
 	if (request_message.req_type == REQ_LOGIN){
 		login(request_message);
 	}
@@ -158,8 +159,6 @@ int main(int argc, char *argv[])
 		return(-1);
 
 	}
-	else{
-
 		all_Channels[0] = Common;
 		Common.numusers = 0;
 
@@ -168,11 +167,18 @@ int main(int argc, char *argv[])
 
 		//printf("%s\n", serverAddr);
 		//printf("%d\n", serverPort);
+/*
+		memset((char *)&hostaddr, 0, sizeof(hostaddr));
+		hostaddr.sin_family = AF_INET;
+		hostaddr.sin_addr.s_addr = inet_addr(serverAddr);
+		//hostaddr.sin_addr.s_addr = htonl(INADDR_ANY); //I DONT KNOW!!!!
+		hostaddr.sin_port = htons(serverPort);
+*/
+		hp = gethostbyname(serverAddr);
 
 		memset((char *)&hostaddr, 0, sizeof(hostaddr));
 		hostaddr.sin_family = AF_INET;
-		//hostaddr.sin_addr.s_addr = inet_addr(serverAddr);
-		hostaddr.sin_addr.s_addr = htonl(INADDR_ANY); //I DONT KNOW!!!!
+		memcpy((void *)&hostaddr.sin_addr, hp->h_addr_list[0], hp->h_length);
 		hostaddr.sin_port = htons(serverPort);
 
 		if ((serverSocket = socket(AF_INET, SOCK_STREAM, 0)) < 0){
@@ -187,10 +193,14 @@ int main(int argc, char *argv[])
 			return(-1);
 		};
 
-		struct timeval tv;
+
+		
+		printf("waiting for connection\n");
+		while(Run == 1){
+		/*struct timeval tv;
 		fd_set readfds;
 		fd_set master;
-		tv.tv_sec = 3;
+		tv.tv_sec = 5;
 		int fdmax;
 
 		FD_ZERO(&readfds);
@@ -198,19 +208,33 @@ int main(int argc, char *argv[])
 		//FD_SET(STDIN, &master);
 		FD_SET(serverSocket, &master);
 		fdmax = serverSocket;
-		
-		printf("waiting for connection\n");
-		while(Run == 1){	
-			int temp;
-			temp = select(fdmax + 1, &readfds, NULL, NULL, &tv);
-			if (FD_ISSET(serverSocket, &readfds)){
-				printf("connection\n");
-				recieve();
-			}
-
+		readfds = master;
+		*/	
+			//printf("Waiting for message\n");
+			//if (select(fdmax + 1, &readfds, NULL, NULL, &tv) == -1){
+			//	perror("select");
+			//	exit(0);
+			//}
+			//int i;
+			//for (i = 0; i <= fdmax; i++){	
+			//	if (FD_ISSET(i, &readfds)){
+			//		printf("connection\n");
+		struct request request_message;	
+		addrlen = sizeof(remaddr);
+		int temp;
+		temp = recvfrom(serverSocket, &request_message, sizeof(request_message), 0, (struct sockaddr *)&remaddr, &addrlen);
+		if ( temp > 0 ){
+			recieve(request_message);
+		}
+		//else if	(temp == -1){
+			//perror("recvfrom");
+			
+		//}
+				//	}
+			//}
 		};
 	close(serverSocket);
 	return 0;
-	};
+
 	
 }
