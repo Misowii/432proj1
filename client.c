@@ -15,7 +15,6 @@
 	char *serverName;
 	int serverPort;
 	char *username;
-	char message[] = "testing\n";
 	unsigned char recvmessage[SAY_MAX];
 	int recvlen; 
 	int temp;
@@ -142,82 +141,66 @@ int main(int argc, char *argv[])
 	if (argc != 4)
 	{
 		printf("Client requires 3 arguments. Servername, Port, and Username.\n");
-
+		return(-1);
 	}
-	else
-	{
-		serverName = argv[1];
-		serverPort = atoi(argv[2]);
-		username = argv[3];
 	
-		clientSocket = socket(AF_INET, SOCK_DGRAM, 0);
+	serverName = argv[1];	
+	serverPort = atoi(argv[2]);
+	username = argv[3];
+	
+	clientSocket = socket(AF_INET, SOCK_DGRAM, 0);
 
-		hp = gethostbyname(serverName);
+	hp = gethostbyname(serverName);
 
-		memset((char *)&serv_address, 0, sizeof(serv_address));
-		serv_address.sin_family = AF_INET;
-		memcpy((void *)&serv_address.sin_addr, hp->h_addr_list[0], hp->h_length);
-		//serv_address.sin_addr.s_addr = inet_addr(serverName);
-		serv_address.sin_port = htons(serverPort);
+	memset((char *)&serv_address, 0, sizeof(serv_address));
+	serv_address.sin_family = AF_INET;
+	memcpy((void *)&serv_address.sin_addr, hp->h_addr_list[0], hp->h_length);
+	serv_address.sin_port = htons(serverPort);
 
-		printf("%s\n", serverName);
+	//printf("%s\n", serverName);
 
-		if (sendto(clientSocket, message, strlen(message), 0, (struct sockaddr *)&serv_address, sizeof(serv_address)) < (0)){
-			printf("Connection Failed!\n");
-			return 0;
-		}
-		
-		printf("Connection Success\n");
-		login(username);
+	login(username);
 
-		while (running == 1){
-			//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
-			temp = read(1, cmd, 1024);
-			cmd[temp-1] = '\0';
+	while (running == 1){
+		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
+		temp = read(1, cmd, 1024);
+		cmd[temp-1] = '\0';
 
-			if (cmd[0] == command){
-				comtype = strtok(cmd, " ");
-				//printf("%s\n", comtype);
-				if (strcmp(cmd, exitcom) == 0){	
-					exitclient();
-				}
-				else if(strcmp(cmd, listcom)== 0){
-					list();
-				}
-
-				else if(strcmp(comtype, whocom)== 0){
-					who();
-				}
-				else if(strcmp(comtype, joincom) == 0){
-					comtype = strtok(NULL, " ");
-					join(comtype);
-				}
-				else if(strcmp(comtype, leavecom) == 0){
-					comtype = strtok(NULL, " ");
-					leave(comtype);
-				}
-				else if(strcmp(comtype, switchcom) == 0){
-					comtype = strtok(NULL, " ");
-					switchto(comtype);
-				}
-				else if (strcmp(cmd, "/currentchannel") == 0){
-					printf("%s\n", current_channel);
-				}
-				else{
-					printf("Unrecognized Command!\n");
-				}
-
+		if (cmd[0] == command){
+			comtype = strtok(cmd, " ");
+			//printf("%s\n", comtype);
+			if (strcmp(cmd, exitcom) == 0){	
+				exitclient();
+			}
+			else if(strcmp(cmd, listcom)== 0){
+				list();
+			}
+			else if(strcmp(comtype, whocom)== 0){
+				who();
+			}
+			else if(strcmp(comtype, joincom) == 0){
+				comtype = strtok(NULL, " ");
+				join(comtype);
+			}
+			else if(strcmp(comtype, leavecom) == 0){
+				comtype = strtok(NULL, " ");
+				leave(comtype);
+			}
+			else if(strcmp(comtype, switchcom) == 0){
+				comtype = strtok(NULL, " ");
+				switchto(comtype);
+			}
+			else if (strcmp(cmd, "/currentchannel") == 0){
+				printf("%s\n", current_channel);
 			}
 			else{
-				//printf("%s\n", cmd);
-				say();
+				printf("Unrecognized Command!\n");
 			}
 		}
-	
-
-
-
-
+		else{
+			//printf("%s\n", cmd);
+			say();
+			}
 
 		close(clientSocket);
 		return 0;
