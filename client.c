@@ -160,6 +160,9 @@ void exitclient(){
 
 void recieve(){
 	struct text rectext;
+	//bzera(rectext, sizeof(rectext));
+	memset((char *)&rectext, 0, sizeof(rectext));
+
 	recvlen = recvfrom(clientSocket, &rectext, sizeof(rectext), 0, (struct sockaddr *)&serv_address, &addrlen );
 	
 	if (rectext.txt_type == TXT_SAY){
@@ -275,6 +278,10 @@ int main(int argc, char *argv[])
 	//printf("%s\n", serverName);
 	addrlen = sizeof(serv_address);
 
+	login(username);
+	join(Common);
+
+	while (running == 1){
 	struct timeval tv;
 	fd_set readfds;
 	fd_set master;
@@ -286,12 +293,6 @@ int main(int argc, char *argv[])
 	FD_SET(STDIN, &master);
 	FD_SET(clientSocket, &master);
 	fdmax = clientSocket;
-
-
-	login(username);
-	join(Common);
-
-	while (running == 1){
 		readfds = master;
 		//recvlen = recvfrom(clientSocket, recvmessage, strlen(recvmessage), 0, (struct sockaddr *)&serv_address, &addrlen );
 		int temp;
